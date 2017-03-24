@@ -4,7 +4,7 @@
 
 # release-multiple-note-generators
 
-release-multiple-note-generators is a [semantic-release](https://github.com/semantic-release/semantic-release) plugin which allows you to run multiple note generation plugins in parallel.
+release-multiple-note-generators is a [semantic-release](https://github.com/semantic-release/semantic-release) plugin which allows you to chain together multiple note generation plugins. You can use this plugin in combination with other note generation plugins to mutate the default log message or generate other release artifacts. For example, you could publish an AWS SNS message containing release information with [release-sns](https://github.com/chasingmaxwell/release-sns). Each plugin is invoked in the order it is defined and passed an `incompleteLog` configuration property which is either the log as it was returned by the previous plugin or an empty string if the plugin is first in your configuration.
 
 ## Installation
 
@@ -37,4 +37,4 @@ release-multiple-note-generators is a [semantic-release](https://github.com/sema
    }
    ```
 
-   The "plugins" config property should contain the configuration for the generateNotes plugins as you would normally format them when specifying a plugin for semantic-release. In the above example we are using the default release-notes-generator plugin which creates release notes in GitHub. Then we are also specifying "some-other-plugin" to which we are also passing configuration.
+   The "plugins" config property should contain the configuration for the generateNotes plugins as you would normally format them when specifying a plugin for semantic-release. In the above example we are using the default release-notes-generator plugin which generates the initial changelog. Then we are also specifying "some-other-plugin" to which we are also passing configuration. Remember that the order in which your plugins are specified is important. Each plugin will receive the log as it was returned by the previous plugin.

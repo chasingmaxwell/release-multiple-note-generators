@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const relative = require('require-relative');
 
 module.exports = (pluginConfig, config, callback) => {
@@ -6,36 +7,32 @@ module.exports = (pluginConfig, config, callback) => {
     return;
   }
 
-  // Promisify all the plugins.
-  const plugins = pluginConfig.plugins.map(nestedPluginConfig => new Promise((resolve) => {
-    let plugin;
-    if (typeof nestedPluginConfig === 'string') {
-      plugin = relative(nestedPluginConfig);
-    }
-    else if (nestedPluginConfig && (typeof nestedPluginConfig.path === 'string')) {
-      plugin = relative(nestedPluginConfig.path);
-    }
+  let generate = Promise.resolve('');
 
-    if (plugin) {
-      plugin(nestedPluginConfig, config, (err, res) => {
-        resolve({ err, res });
-      });
-    }
-    else {
-      resolve({ err: new Error('Improperly defined plugin.') });
-    }
-  }));
+  pluginConfig.plugins.forEach((pluginDef) => {
+    generate = generate.then(log => new Promise((resolve) => {
+      let plugin;
+      if (typeof pluginDef === 'string') {
+        plugin = relative(pluginDef).bind(null, { incompleteLog: log });
+      }
+      else if (pluginDef && (typeof pluginDef.path === 'string')) {
+        plugin = relative(pluginDef.path).bind(null, _.assign({ incompleteLog: log }, pluginDef));
+      }
+
+      if (plugin) {
+        plugin(config, (err, res) => {
+          if (err) throw err;
+          resolve(res);
+        });
+      }
+      else {
+        throw new Error('Improperly defined plugin.');
+      }
+    }));
+  });
 
   // Execute all the plugins, collecting and reporting their results.
-  Promise.all(plugins)
-    .then((pluginResults) => {
-      const args = ['err', 'res']
-        .map(type => pluginResults.map(result => result[type]).filter(val => val != null))
-        .map(group => (group.length > 0 ? group : null));
-
-      callback(args[0], args[1]);
-    })
-    .catch((err) => {
-      callback(err);
-    });
+  generate
+    .then(log => callback(null, log))
+    .catch(err => callback(err));
 };
